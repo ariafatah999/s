@@ -1,0 +1,67 @@
+name: Generate GitHub Profile Data
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout TANPA FILE (super-clean)
+      - name: Checkout (no files)
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          sparse-checkout: |
+            .github/scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+
+      - name: Switch to data-cache branch (clean empty branch)
+        run: |
+          git fetch origin data-cache || true
+
+          # Jika branch belum ada → buat orphan branch
+          if git show-ref --quiet refs/heads/data-cache; then
+            git checkout data-cache
+          else
+            git checkout --orphan data-cache
+          fi
+
+          # Bersihkan semua file (hanya sisakan git)
+          find . -mindepth 1 -not -name ".git" -exec rm -rf {} \;
+
+          mkdir -p data
+
+      - name: Copy fetch script from main
+        run: |
+          git show origin/main:.github/scripts/fetch-graphql.js > fetch.js
+
+      - name: Generate Profile JSON
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_USERNAME: ariafatah0711
+        run: |
+          node fetch.js > data/profile.json
+          cat data/profile.json
+
+      - name: Commit & Push JSON Only
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
+
+          git add data/profile.json
+
+          git diff --quiet --cached || git commit -m "update: profile data"
+
+          git push origin data-cache --force
