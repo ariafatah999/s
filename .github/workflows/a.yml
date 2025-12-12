@@ -50,7 +50,7 @@ jobs:
       - name: Generate Profile JSON
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_USERNAME: ariafatah0711
+          GITHUB_USERNAME: ariafatah999
         run: |
           node fetch.js > data/profile.json
           cat data/profile.json
